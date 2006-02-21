@@ -11,25 +11,39 @@ PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
 
 graph = Graph()
 
-for line in sys.stdin:
-    if 'profile.myspace.com' in line:
-        m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] "(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) "(?P<referer>.*?)" "(?P<agent>.*?)"', line)
-        if m is None:
+for server in ["maxradi.us", "photo.bigasterisk.com", "leybourne.com"]:
+    for logfile in [lf % server for lf in
+                    ["/oldbang/var/log/apache/%s-access_log",
+                     "/var/log/apache/%s-access_log"]]:
+        print >>sys.stderr, "reading %s" % logfile
+        try:
+            f = open(logfile)
+        except IOError:
             continue
-        if 'myspace' not in m.group('referer'):
-            continue
-        local = URIRef("http://maxradi.us" + m.group('req').split()[1])
-        m2 = re.search(r'friend(?:id|ID)=(\d+)', m.group('referer'))
-        if m2 is not None:
-            m2.group(1)
-            clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
-            graph.add((URIRef(clean_referer), PR['requests'], local))
-            graph.add((URIRef(clean_referer), RDFS.label, Literal("Myspace #%s" % m2.group(1))))
-        else:
-            referer = URIRef(m.group('referer'))
-            #graph.add((referer, PR['requests'], local))
-#        graph.add((HOST[m.group('host')], PR['requested'], 
-
+        for line in f:
+            if 'profile.myspace.com' in line:
+                m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] '+
+                             r'"(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) '+
+                             r'"(?P<referer>.*?)" "(?P<agent>.*?)"', line)
+                if m is None:
+                    continue
+                if 'myspace' not in m.group('referer'):
+                    continue
+                local = URIRef("http://%s%s" %
+                               (server, m.group('req').split()[1]))
+                m2 = re.search(r'friend(?:id|ID)=(\d+)', m.group('referer'))
+                if m2 is not None:
+                    m2.group(1)
+                    clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
+                    graph.add((URIRef(clean_referer), PR['requests'], local))
+                    graph.add((URIRef(clean_referer), RDFS.label,
+                               Literal("Myspace #%s" % m2.group(1))))
+                else:
+                    # editpage requests, etc
+                    
+                    referer = URIRef(m.group('referer'))
+                    #graph.add((referer, PR['requests'], local))
+        #        graph.add((HOST[m.group('host')], PR['requested'], 
 
 print graph.serialize()
 
