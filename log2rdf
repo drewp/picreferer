@@ -1,0 +1,36 @@
+#!/usr/bin/python
+
+# cat /oldbang/var/log/apache/maxradi.us-access_log ~/logs/maxradi.us-access_log | ./log2rdf > data.rdf
+
+import re, sys
+
+from rdflib import Graph, Namespace, URIRef, RDFS, Literal
+
+HOST = Namespace("http://bigasterisk.com/2006/02/picreferer/host#")
+PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
+
+graph = Graph()
+
+for line in sys.stdin:
+    if 'profile.myspace.com' in line:
+        m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] "(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) "(?P<referer>.*?)" "(?P<agent>.*?)"', line)
+        if m is None:
+            continue
+        if 'myspace' not in m.group('referer'):
+            continue
+        local = URIRef("http://maxradi.us" + m.group('req').split()[1])
+        m2 = re.search(r'friend(?:id|ID)=(\d+)', m.group('referer'))
+        if m2 is not None:
+            m2.group(1)
+            clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
+            graph.add((URIRef(clean_referer), PR['requests'], local))
+            graph.add((URIRef(clean_referer), RDFS.label, Literal("Myspace #%s" % m2.group(1))))
+        else:
+            referer = URIRef(m.group('referer'))
+            #graph.add((referer, PR['requests'], local))
+#        graph.add((HOST[m.group('host')], PR['requested'], 
+
+
+print graph.serialize()
+
+        

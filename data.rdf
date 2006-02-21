@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+   xmlns:_3="http://bigasterisk.com/2006/02/picreferer#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=33986591">
+    <_3:requests rdf:resource="http://maxradi.us/food/chocolate/christmas2003/field_big.jpg"/>
+    <rdfs:label>Myspace #33986591</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=26985077">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #26985077</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=7080501">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #7080501</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=9786292">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #9786292</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=7337970">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street2.jpg"/>
+    <rdfs:label>Myspace #7337970</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=3271097">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #3271097</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=55372096">
+    <_3:requests rdf:resource="http://maxradi.us/food/chocolate/christmas2003/chocolatetray2_big.jpg"/>
+    <rdfs:label>Myspace #55372096</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=10340854">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #10340854</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=20527418">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #20527418</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=34977533">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #34977533</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=18643808">
+    <_3:requests rdf:resource="http://maxradi.us/food/chocolate/christmas2003/chocolatetray2_big.jpg"/>
+    <rdfs:label>Myspace #18643808</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=20892054">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_tree.jpg"/>
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_intersection.jpg"/>
+    <rdfs:label>Myspace #20892054</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=12927072">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #12927072</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=11609644">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_tree.jpg"/>
+    <rdfs:label>Myspace #11609644</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=17490215">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #17490215</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=40733058">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #40733058</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=32828208">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #32828208</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=28620423">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #28620423</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=43752511">
+    <_3:requests rdf:resource="http://maxradi.us/photos/random/oatmeal.jpg"/>
+    <rdfs:label>Myspace #43752511</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=42446776">
+    <_3:requests rdf:resource="http://maxradi.us/food/chocolate/christmas2004/ChocolateBox.jpg"/>
+    <rdfs:label>Myspace #42446776</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=14547332">
+    <_3:requests rdf:resource="http://maxradi.us/food/chocolate/christmas2004/ChocolateBox.jpg"/>
+    <rdfs:label>Myspace #14547332</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=24247406">
+    <_3:requests rdf:resource="http://maxradi.us/photos/Food/camembert.jpg"/>
+    <rdfs:label>Myspace #24247406</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=9057547">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #9057547</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&amp;friendid=31990369">
+    <_3:requests rdf:resource="http://maxradi.us/photos/foggy_street.jpg"/>
+    <rdfs:label>Myspace #31990369</rdfs:label>
+  </rdf:Description>
+</rdf:RDF>
+

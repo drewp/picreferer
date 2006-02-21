@@ -1,0 +1,32 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xmlns:n="http://nevow.com/ns/nevow/0.1">
+<head>
+<title>referers from myspace</title>
+</head>
+<body>
+
+<p>myspace pages that use our images:</p>
+
+<table n:render="sequence" n:data="pages" border="1">
+  <tr n:pattern="header">
+    <th>myspace page</th>
+    <th>local image</th>
+  </tr>
+  <tr n:pattern="item">
+    <td><a n:render="referer" n:data="0"><n:attr name="href">
+             <n:slot name="url" />
+           </n:attr><n:slot name="label" /></a>
+    </td>
+    <td><n:invisible n:render="sequence" n:data="1">
+        <p n:pattern="item">
+           <a><n:attr name="href">
+              <n:invisible n:render="string" n:data="0"/>
+              </n:attr><div n:render="string" n:data="2"/>
+              <img><n:attr name="src">/thumb/<n:invisible n:render="string" n:data="1"/></n:attr>
+              </img></a>
+        </p>
+        </n:invisible>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

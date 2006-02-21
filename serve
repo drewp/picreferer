@@ -1,0 +1,53 @@
+import md5, urllib
+from StringIO import StringIO
+from twisted.application import internet, service
+from nevow import appserver
+from nevow import loaders, rend, static, tags as T
+import Image
+
+from rdflib import Graph, Namespace, RDFS
+PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
+
+graph = Graph()
+graph.parse("data.rdf")
+
+class Main(rend.Page):
+    docFactory = loaders.xmlfile("main.html")
+    def __init__(self):
+        self.thumb = {} # urlmd5 : small jpeg
+        self.urlmd5 = {} # urlmd5 : local uri
+        for local in graph.objects(None, PR['requests']):
+            self.urlmd5[md5.md5(local).hexdigest()] = local
+        
+    def data_pages(self, ctx, data):
+        for page in graph.subjects(PR['requests'], None):
+            locals = list(graph.objects(page, PR['requests']))
+            yield (page,
+                   [(local, md5.md5(local).hexdigest(), local)
+                    for local in locals])
+
+    def render_referer(self, ctx, data):
+        ctx.fillSlots("url", data)
+        ctx.fillSlots("label", graph.value(data, RDFS.label))
+        return ctx.tag
+
+    def locateChild(self, ctx, segments):
+        if segments[0] == 'thumb':
+            if segments[1] not in self.thumb:
+                local = self.urlmd5[segments[1]]
+                fullimg = StringIO(urllib.urlopen(local).read())
+                img = Image.open(fullimg)
+                img.thumbnail((100,100))
+                jpg = StringIO()
+                jpg.name = local
+                img.save(jpg)
+                self.thumb[segments[1]] = jpg.getvalue()
+            return static.Data(self.thumb[segments[1]], "image/jpeg"), ()
+        else:
+            return rend.Page.locateChild(self, ctx, segments)
+
+
+
+application = service.Application('picreferer')
+webServer = internet.TCPServer(8083, appserver.NevowSite(Main()))
+webServer.setServiceParent(application)
