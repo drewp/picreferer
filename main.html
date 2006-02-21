@@ -6,6 +6,7 @@
 
 <p>myspace pages that use our images:</p>
 
+<!--
 <table n:render="sequence" n:data="pages" border="1">
   <tr n:pattern="header">
     <th>myspace page</th>
@@ -28,5 +29,35 @@
     </td>
   </tr>
 </table>
+-->
+
+<table n:render="sequence" n:data="images" border="1">
+  <tr n:pattern="header">
+    <th>local image</th>
+    <th>myspace pages</th>
+  </tr>
+  <tr n:pattern="item">
+    <td n:data="0">
+      <a><n:attr name="href">
+           <n:invisible n:render="string" n:data="0"/>
+         </n:attr><div n:render="string" n:data="2"/>
+         <img><n:attr name="src">/thumb/<n:invisible n:render="string" n:data="1"/></n:attr></img>
+      </a>
+    </td>
+    <td>
+      <n:invisible n:render="sequence" n:data="1">
+        <n:invisible n:pattern="item">
+          <a n:render="referer"><n:attr name="href">
+          <n:slot name="url" />
+          </n:attr><n:slot name="label" /></a>
+        </n:invisible>
+      </n:invisible>
+    </td>
+  </tr>
+</table>
+
+
+
+
 </body>
 </html>

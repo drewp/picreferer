@@ -1,4 +1,5 @@
 import md5, urllib
+from sets import Set
 from StringIO import StringIO
 from twisted.application import internet, service
 from nevow import appserver
@@ -10,6 +11,25 @@ PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
 
 graph = Graph()
 graph.parse("data.rdf")
+
+def thumb(cksum, localURL):
+    print "resizing", localURL
+    try:
+        f = open("thumb/%s" % cksum)
+    except IOError:
+        pass
+    else:
+        return f.read()
+    
+    fullimg = StringIO(urllib.urlopen(localURL).read())
+    img = Image.open(fullimg)
+    img.thumbnail((100,100))
+    jpg = StringIO()
+    jpg.name = localURL
+    img.save(jpg)
+    open("thumb/%s" % cksum, "w").write(jpg.getvalue())
+    return jpg.getvalue()
+    
 
 class Main(rend.Page):
     docFactory = loaders.xmlfile("main.html")
@@ -26,6 +46,13 @@ class Main(rend.Page):
                    [(local, md5.md5(local).hexdigest(), local)
                     for local in locals])
 
+    def data_images(self, ctx, data):
+        locals = Set(graph.objects(None, PR['requests']))
+        for local in locals:
+            myspacers = list(graph.subjects(PR['requests'], local))
+            yield ((local, md5.md5(local).hexdigest(), str(local)[:100]),
+                   myspacers)
+
     def render_referer(self, ctx, data):
         ctx.fillSlots("url", data)
         ctx.fillSlots("label", graph.value(data, RDFS.label))
@@ -34,15 +61,13 @@ class Main(rend.Page):
     def locateChild(self, ctx, segments):
         if segments[0] == 'thumb':
             if segments[1] not in self.thumb:
-                local = self.urlmd5[segments[1]]
-                fullimg = StringIO(urllib.urlopen(local).read())
-                img = Image.open(fullimg)
-                img.thumbnail((100,100))
-                jpg = StringIO()
-                jpg.name = local
-                img.save(jpg)
-                self.thumb[segments[1]] = jpg.getvalue()
-            return static.Data(self.thumb[segments[1]], "image/jpeg"), ()
+                try:
+                    self.thumb[segments[1]] = thumb(segments[1],
+                                                    self.urlmd5[segments[1]])
+                except (IOError, KeyError, ZeroDivisionError):
+                    self.thumb[segments[1]] = ""
+            data = self.thumb[segments[1]]
+            return static.Data(data, "image/jpeg"), ()
         else:
             return rend.Page.locateChild(self, ctx, segments)
 
