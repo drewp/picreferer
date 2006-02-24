@@ -1,3 +1,4 @@
+from __future__ import division
 import md5, urllib
 from sets import Set
 from StringIO import StringIO
@@ -6,11 +7,18 @@ from nevow import appserver
 from nevow import loaders, rend, static, tags as T
 import Image
 
-from rdflib import Graph, Namespace, RDFS
+from rdflib import Namespace, RDFS
+from rdflib.sparql.sparqlGraph import SPARQLGraph as Graph
+from rdflib.sparql import GraphPattern
+from rdflib.sparql.sparqlOperators import getLiteralValue
+
 PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
+DC = Namespace("http://http://purl.org/dc/elements/1.1/")
 
 graph = Graph()
-graph.parse("data.rdf")
+print "reading db"
+graph.parse("data.rdf", format="nt")
+print "done"
 
 def thumb(cksum, localURL):
     print "resizing", localURL
@@ -29,14 +37,35 @@ def thumb(cksum, localURL):
     img.save(jpg)
     open("thumb/%s" % cksum, "w").write(jpg.getvalue())
     return jpg.getvalue()
-    
+
+_dr = {}
+def hitSummary(remotePage, localFile):
+    """totalBytes, hitCount, earliestDate, latestDate"""
+    key = (remotePage, localFile)
+    if key not in _dr:
+        bytes = 0
+        hitCount = 0
+        dates = []
+        for by,date in graph.query(("?bytes", "?date"),
+                GraphPattern([("?hit", PR['remotePage'], remotePage),
+                              ("?hit", PR['localFile'], localFile),
+                              ("?hit", DC['date'], "?date"),
+                              ("?hit", PR['bytes'], "?bytes")])):
+            dates.append(date)
+            bytes += getLiteralValue(by)
+            hitCount += 1
+        dates.sort()
+
+        _dr[key] = (bytes, hitCount, dates[0], dates[-1])
+    return _dr[key]
 
 class Main(rend.Page):
     docFactory = loaders.xmlfile("main.html")
     def __init__(self):
         self.thumb = {} # urlmd5 : small jpeg
         self.urlmd5 = {} # urlmd5 : local uri
-        for local in graph.objects(None, PR['requests']):
+
+        for local in graph.objects(None, PR['localFile']):
             self.urlmd5[md5.md5(local).hexdigest()] = local
         
     def data_pages(self, ctx, data):
@@ -47,11 +76,20 @@ class Main(rend.Page):
                     for local in locals])
 
     def data_images(self, ctx, data):
-        locals = Set(graph.objects(None, PR['requests']))
+        locals = Set(graph.objects(None, PR['localFile']))
         for local in locals:
-            myspacers = list(graph.subjects(PR['requests'], local))
+            myspWords = []
+            myspacers = graph.query("?remote",
+                         GraphPattern([("?hit", PR['localFile'], local),
+                                       ("?hit", PR['remotePage'], "?remote")]))
+            for mysp in myspacers:
+                bytes, hitCount, start, end = hitSummary(mysp, local)
+                desc = ("%s hits (%.1f megabytes) from %s to %s" %
+                        (hitCount, bytes / (1<<20), start, end))
+                myspWords.append((mysp, desc))
+                    
             yield ((local, md5.md5(local).hexdigest(), str(local)[:100]),
-                   myspacers)
+                   myspWords)
 
     def render_referer(self, ctx, data):
         ctx.fillSlots("url", data)

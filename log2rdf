@@ -2,16 +2,24 @@
 
 # cat /oldbang/var/log/apache/maxradi.us-access_log ~/logs/maxradi.us-access_log | ./log2rdf > data.rdf
 
-import re, sys
+# also grab referers like http://users.livejournal.com/_therussian/
 
-from rdflib import Graph, Namespace, URIRef, RDFS, Literal
+import re, sys, time
+import dateutil.parser
+from rdflib import Graph, Namespace, URIRef, RDFS, Literal, BNode
 
 HOST = Namespace("http://bigasterisk.com/2006/02/picreferer/host#")
 PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
+DC = Namespace("http://http://purl.org/dc/elements/1.1/")
 
 graph = Graph()
+graph.bind('dc', "http://http://purl.org/dc/elements/1.1/")
+graph.bind('pr', "http://bigasterisk.com/2006/02/picreferer#")
 
-for server in ["maxradi.us", "photo.bigasterisk.com", "leybourne.com"]:
+for server in ["maxradi.us",
+               "photo.bigasterisk.com",
+               "leybourne.com",
+               ]:
     for logfile in [lf % server for lf in
                     ["/oldbang/var/log/apache/%s-access_log",
                      "/var/log/apache/%s-access_log"]]:
@@ -21,30 +29,52 @@ for server in ["maxradi.us", "photo.bigasterisk.com", "leybourne.com"]:
         except IOError:
             continue
         for line in f:
-            if 'profile.myspace.com' in line:
+            if 'profile.myspace.com' in line or 'http://users.livejournal.com/' in line:
                 m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] '+
                              r'"(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) '+
                              r'"(?P<referer>.*?)" "(?P<agent>.*?)"', line)
                 if m is None:
                     continue
-                if 'myspace' not in m.group('referer'):
+                if ('myspace' not in m.group('referer') and
+                    'livejournal.com' not in m.group('referer')):
                     continue
+                date = m.group('date')
+                date = date[:11] + " " + date[12:]
+                date = dateutil.parser.parse(date).isoformat()
+                date = Literal(date,
+                         datatype='http://www.w3.org/2001/XMLSchema#dateTime')
                 local = URIRef("http://%s%s" %
                                (server, m.group('req').split()[1]))
+
                 m2 = re.search(r'friend(?:id|ID)=(\d+)', m.group('referer'))
                 if m2 is not None:
-                    m2.group(1)
                     clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
-                    graph.add((URIRef(clean_referer), PR['requests'], local))
-                    graph.add((URIRef(clean_referer), RDFS.label,
-                               Literal("Myspace #%s" % m2.group(1))))
+                    #graph.add((URIRef(clean_referer), PR['requests'], local))
+                    label = Literal("Myspace #%s" % m2.group(1))
                 else:
+                    m2 = re.search(r'http://users.livejournal.com/(.*?)/', m.group('referer'))
+                    if m2 is not None:
+                        clean_referer = m.group('referer')
+                        label = Literal("Livejornal %s" % m2.group(1))
+                    else:
+                        continue
+
+                graph.add((URIRef(clean_referer), RDFS.label, label))
+
+                hit = BNode()
+                graph.add((hit, PR['host'], HOST[m.group('host')]))
+                graph.add((hit, DC['date'], date))
+                graph.add((hit, PR['localFile'], local))
+                graph.add((hit, PR['remotePage'], URIRef(clean_referer)))
+                graph.add((hit, PR['bytes'], Literal(m.group('bytes'), datatype='http://www.w3.org/2001/XMLSchema#integer')))
+                    
+                #else:
                     # editpage requests, etc
                     
-                    referer = URIRef(m.group('referer'))
+                 #   referer = URIRef(m.group('referer'))
                     #graph.add((referer, PR['requests'], local))
         #        graph.add((HOST[m.group('host')], PR['requested'], 
 
-print graph.serialize()
+print graph.serialize(format="nt")
 
         

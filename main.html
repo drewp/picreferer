@@ -46,11 +46,11 @@
     </td>
     <td>
       <n:invisible n:render="sequence" n:data="1">
-        <n:invisible n:pattern="item">
-          <a n:render="referer"><n:attr name="href">
+        <div n:pattern="item">
+          <a n:render="referer" n:data="0"><n:attr name="href">
           <n:slot name="url" />
-          </n:attr><n:slot name="label" /></a>
-        </n:invisible>
+          </n:attr><n:slot name="label" /></a> <nobr><n:invisible n:render="string" n:data="1"/></nobr>
+        </div>
       </n:invisible>
     </td>
   </tr>
