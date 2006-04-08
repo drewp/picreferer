@@ -4,77 +4,127 @@
 
 # also grab referers like http://users.livejournal.com/_therussian/
 
+from __future__ import division
 import re, sys, time
 import dateutil.parser
-from rdflib import Graph, Namespace, URIRef, RDFS, Literal, BNode
+from rdflib import Namespace, URIRef, RDFS, Literal, BNode
+from rdflib import Graph
 
 HOST = Namespace("http://bigasterisk.com/2006/02/picreferer/host#")
 PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
 DC = Namespace("http://http://purl.org/dc/elements/1.1/")
 
-graph = Graph()
-graph.bind('dc', "http://http://purl.org/dc/elements/1.1/")
-graph.bind('pr', "http://bigasterisk.com/2006/02/picreferer#")
+def remoteLabelAndURI(referer):
+    m2 = re.search(r'friend(?:id|ID)=(\d+)', referer)
+    if m2 is not None:
+        clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
+        label = Literal("Myspace #%s" % m2.group(1))
+        return label, clean_referer
+        
+    m2 = re.search(r'http://users.livejournal.com/(.*?)/', referer)
+    if m2 is not None:
+        clean_referer = referer
+        label = Literal("Livejornal %s" % m2.group(1))
+        return label, clean_referer
 
+    raise ValueError("not a referer we're interested in")
+
+def addHit(graph, host, date, local, remote, bytes):
+    hit = BNode()
+    graph.add((hit, PR['host'], HOST[host]))
+    graph.add((hit, DC['date'], date))
+    graph.add((hit, PR['localFile'], local))
+    graph.add((hit, PR['remotePage'], remote))
+    graph.add((hit, PR['bytes'], Literal(bytes,
+                         datatype='http://www.w3.org/2001/XMLSchema#integer')))
+
+def addLogLineTriples(graph, server, line):
+    """returns the (approximate) number of triples added"""
+    if not ('profile.myspace.com' in line or
+            'http://users.livejournal.com/' in line):
+        return 0
+
+    m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] '+
+                 r'"(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) '+
+                 r'"(?P<referer>.*?)" "(?P<agent>.*?)"', line)
+    if m is None:
+        return 0
+    if ('myspace' not in m.group('referer') and
+        'livejournal.com' not in m.group('referer')):
+        return 0
+    date = m.group('date')
+    date = date[:11] + " " + date[12:]
+    date = dateutil.parser.parse(date).isoformat()
+    date = Literal(date,
+             datatype='http://www.w3.org/2001/XMLSchema#dateTime')
+    local = URIRef("http://%s%s" %
+                   (server, m.group('req').split()[1]))
+
+    try:
+        label, clean_referer = remoteLabelAndURI(m.group('referer'))
+    except ValueError:
+        return 0
+
+    graph.add((URIRef(clean_referer), RDFS.label, label))
+
+    addHit(graph, m.group('host'), date, local,
+           URIRef(clean_referer), m.group('bytes'))
+    return 6
+
+if 0:
+    graph = Graph('MySQL')
+    graph.open(configuration="user=drewp,db=picreferer,host=localhost,password=drewp", create=False)
+    print graph.store.__repr__()
+    graph.destroy(configuration="user=drewp,db=picreferer,host=localhost,password=drewp")
+
+    graph.open(configuration="user=drewp,db=picreferer,host=localhost,password=drewp", create=True)
+
+
+graph = Graph("Sleepycat")
+graph.open("/tmp/picreferer.db")
+
+#import RDF
+#storage = RDF.Storage(storage_name='sqlite', name='data.sqlite',
+#                      options_string="")
+#model = RDF.Model(storage)
+#model.add(RDF.Statement(RDF.Uri("http://example.com"),
+#                        RDF.Uri("http://example.com"),
+#                        RDF.Uri("http://example.com")))
+
+
+#store = rdflib.store.Redland.Redland(model=model)
+#graph = Graph(backend=store)
+#graph.open("cat2")
+print "start", len(graph)
+
+count = 0
 for server in ["maxradi.us",
-               "photo.bigasterisk.com",
+               #"photo.bigasterisk.com",
                "leybourne.com",
                ]:
     for logfile in [lf % server for lf in
-                    ["/oldbang/var/log/apache/%s-access_log",
+                    [#"/oldbang/var/log/apache/%s-access_log",
                      "/var/log/apache/%s-access_log"]]:
         print >>sys.stderr, "reading %s" % logfile
         try:
             f = open(logfile)
         except IOError:
             continue
+        f.seek(0, 2)
+        fileSize = f.tell()
+        f.seek(0, 0)
+        approxTriples = len(graph)
         for line in f:
-            if 'profile.myspace.com' in line or 'http://users.livejournal.com/' in line:
-                m = re.match(r'(?P<host>.*?) - - \[(?P<date>.*?)\] '+
-                             r'"(?P<req>.*?)" (?P<status>\d+) (?P<bytes>\d+) '+
-                             r'"(?P<referer>.*?)" "(?P<agent>.*?)"', line)
-                if m is None:
-                    continue
-                if ('myspace' not in m.group('referer') and
-                    'livejournal.com' not in m.group('referer')):
-                    continue
-                date = m.group('date')
-                date = date[:11] + " " + date[12:]
-                date = dateutil.parser.parse(date).isoformat()
-                date = Literal(date,
-                         datatype='http://www.w3.org/2001/XMLSchema#dateTime')
-                local = URIRef("http://%s%s" %
-                               (server, m.group('req').split()[1]))
+            moreTriples = addLogLineTriples(graph, server, line)
+            if moreTriples > 0:
+                approxTriples += moreTriples
 
-                m2 = re.search(r'friend(?:id|ID)=(\d+)', m.group('referer'))
-                if m2 is not None:
-                    clean_referer = "http://profile.myspace.com/index.cfm?fuseaction=user.viewprofile&friendid=%s" % m2.group(1)
-                    #graph.add((URIRef(clean_referer), PR['requests'], local))
-                    label = Literal("Myspace #%s" % m2.group(1))
-                else:
-                    m2 = re.search(r'http://users.livejournal.com/(.*?)/', m.group('referer'))
-                    if m2 is not None:
-                        clean_referer = m.group('referer')
-                        label = Literal("Livejornal %s" % m2.group(1))
-                    else:
-                        continue
-
-                graph.add((URIRef(clean_referer), RDFS.label, label))
-
-                hit = BNode()
-                graph.add((hit, PR['host'], HOST[m.group('host')]))
-                graph.add((hit, DC['date'], date))
-                graph.add((hit, PR['localFile'], local))
-                graph.add((hit, PR['remotePage'], URIRef(clean_referer)))
-                graph.add((hit, PR['bytes'], Literal(m.group('bytes'), datatype='http://www.w3.org/2001/XMLSchema#integer')))
+                sys.stdout.write("\rgraph has %s triples; read %.1f%% of %.1fMB file  " % (
+                    approxTriples,
+                    100 * f.tell() / fileSize,
+                    fileSize / (1 << 20)))
+                sys.stdout.flush()
                     
-                #else:
-                    # editpage requests, etc
-                    
-                 #   referer = URIRef(m.group('referer'))
-                    #graph.add((referer, PR['requests'], local))
-        #        graph.add((HOST[m.group('host')], PR['requested'], 
-
-print graph.serialize(format="nt")
-
+graph.commit()
+graph.close()
         

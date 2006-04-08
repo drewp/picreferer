@@ -1,6 +1,7 @@
 from __future__ import division
-import md5, urllib
+import md5, urllib, time
 from sets import Set
+from mwt import MWT
 from StringIO import StringIO
 from twisted.application import internet, service
 from nevow import appserver
@@ -8,6 +9,7 @@ from nevow import loaders, rend, static, tags as T
 import Image
 
 from rdflib import Namespace, RDFS
+from rdflib.Graph import BackwardCompatGraph 
 from rdflib.sparql.sparqlGraph import SPARQLGraph as Graph
 from rdflib.sparql import GraphPattern
 from rdflib.sparql.sparqlOperators import getLiteralValue
@@ -15,10 +17,83 @@ from rdflib.sparql.sparqlOperators import getLiteralValue
 PR = Namespace("http://bigasterisk.com/2006/02/picreferer#")
 DC = Namespace("http://http://purl.org/dc/elements/1.1/")
 
-graph = Graph()
+TIMEOUT = 86400
+
+g = BackwardCompatGraph(backend="Sleepycat")
+g.open("/tmp/picreferer.db")
+graph = Graph(graph=g)
+
+if 0:
+    g = BackwardCompatGraph('MySQL')
+    g.open(configuration="user=drewp,db=picreferer,host=localhost,password=drewp", create=False)
+
+    if 0:
+        print "copy to mem"
+        g2 = BackwardCompatGraph()
+        i = 0
+        for stmt in g:
+            g2.add(stmt)
+        print "done"
+    g2 = g
+
+    graph = Graph(graph=g2)
+
 print "reading db"
-graph.parse("data.rdf", format="nt")
-print "done"
+#graph.parse("data.rdf", format="nt")
+#print "done", len(graph)
+
+
+class SummaryField(object):
+    def __init__(self, var="?bytes"):
+        self.setup()
+
+    def setup(self):
+        pass
+    
+class Total(SummaryField):
+    def setup(self):
+        self.total = 0
+    def accum(self, value):
+        self.total += getLiteralValue(value)
+    def get(self):
+        return self.total
+
+class Range(SummaryField):
+    def setup(self):
+        self.all = []
+    def accum(self, value):
+        self.all.append(value)
+    def get(self):
+        self.all.sort()
+        class _:
+            start = self.all[0]
+            end = self.all[1]
+        return _()
+    
+class Count(SummaryField):
+    def setup(self):
+        self.c = 0
+    def accum(self, value):
+        self.c += 1
+    def get(self):
+        return self.c
+        
+class TripleSummary(object):
+    """maintains summary info about the results of a sparql query. i
+    guess you'll have to add to the graph via this object, or else it
+    will need a way to watch the graph grow"""
+    def __init__(self, graph, graphPattern, **selections):
+        self.selections = selections
+        selectionKeys = selections.keys()
+        for row in graph.query(tuple("?%s" % s for s in selectionKeys),
+                               graphPattern):
+            for var, col in zip(selectionKeys, row):
+                selections[var].accum(col)
+                
+    def __getitem__(self, var):
+        return self.selections[var].get()
+
+
 
 def thumb(cksum, localURL):
     print "resizing", localURL
@@ -38,26 +113,70 @@ def thumb(cksum, localURL):
     open("thumb/%s" % cksum, "w").write(jpg.getvalue())
     return jpg.getvalue()
 
-_dr = {}
+@MWT(timeout=TIMEOUT)
+def _localHits(localFile):
+    print "running localHits", localFile
+    return list(graph.subjects(PR['localFile'], localFile))
+
+@MWT(timeout=TIMEOUT)
 def hitSummary(remotePage, localFile):
     """totalBytes, hitCount, earliestDate, latestDate"""
-    key = (remotePage, localFile)
-    if key not in _dr:
-        bytes = 0
-        hitCount = 0
-        dates = []
+    bytes = 0
+    hitCount = 0
+    dates = []
+    print "query", remotePage, localFile
+#    for hit in _localHits(localFile):
+#        if graph.value(hit, PR['remotePage']) != remotePage:
+#            continue
+#        by = graph.value(hit, PR['bytes'])
+#        date = graph.value(hit, DC['date'])
+    t1 = time.time()
+    
+    if 0:
         for by,date in graph.query(("?bytes", "?date"),
                 GraphPattern([("?hit", PR['remotePage'], remotePage),
                               ("?hit", PR['localFile'], localFile),
                               ("?hit", DC['date'], "?date"),
                               ("?hit", PR['bytes'], "?bytes")])):
+
             dates.append(date)
             bytes += getLiteralValue(by)
             hitCount += 1
-        dates.sort()
+    else:
+        ts = TripleSummary(graph,
+                           GraphPattern([
+            ("?hit", PR['remotePage'], remotePage),
+            ("?hit", PR['localFile'], localFile),
+            ("?hit", DC['date'], "?date"),
+            ("?hit", PR['bytes'], "?bytes")]),
+                           bytes=Total("?bytes"),
+                           date=Range("?date"),
+                           hitCount=Count("?hit"),
+                           )
+        hitCount = ts['hitCount']
+        dates = [ts['date'].start, ts['date'].end]
+        bytes = ts['bytes']
+    print "%.2f sec for %s hits" % (time.time() - t1, hitCount)
+    dates.sort()
 
-        _dr[key] = (bytes, hitCount, dates[0], dates[-1])
-    return _dr[key]
+    return bytes, hitCount, dates[0], dates[-1]
+
+@MWT(timeout=TIMEOUT)
+def remotesUsingLocal(local):
+    print "remotes using", local
+    t1 = time.time()
+    
+    if 1:
+        ret = Set()
+        for hit in _localHits(local):
+            ret.add(graph.value(hit, PR['remotePage']))
+    else:
+        ret = graph.query("?remote",
+                          GraphPattern([("?hit", PR['localFile'], local),
+                                        ("?hit", PR['remotePage'], "?remote")
+                                        ]))
+    print "%s remotes in %.2f sec" % (len(ret), time.time() - t1)
+    return ret
 
 class Main(rend.Page):
     docFactory = loaders.xmlfile("main.html")
@@ -77,22 +196,29 @@ class Main(rend.Page):
 
     def data_images(self, ctx, data):
         locals = Set(graph.objects(None, PR['localFile']))
+        t1 = time.time()
         for local in locals:
-            myspWords = []
-            myspacers = graph.query("?remote",
-                         GraphPattern([("?hit", PR['localFile'], local),
-                                       ("?hit", PR['remotePage'], "?remote")]))
+            myspLines = []
+            print "getting remotes for", local
+            myspacers = remotesUsingLocal(local)
+            print "summaries"
             for mysp in myspacers:
                 bytes, hitCount, start, end = hitSummary(mysp, local)
                 desc = ("%s hits (%.1f megabytes) from %s to %s" %
                         (hitCount, bytes / (1<<20), start, end))
-                myspWords.append((mysp, desc))
-                    
+                myspLines.append((mysp, desc))
+            print "done with",local
             yield ((local, md5.md5(local).hexdigest(), str(local)[:100]),
-                   myspWords)
+                   myspLines)
+            if time.time() > t1 + 5:
+                yield (("", "",
+                  "there are more, but it's taken too long to fetch them"), [])
+                return
 
+    @MWT(timeout=TIMEOUT)
     def render_referer(self, ctx, data):
         ctx.fillSlots("url", data)
+        print "get value for", data
         ctx.fillSlots("label", graph.value(data, RDFS.label))
         return ctx.tag
 
