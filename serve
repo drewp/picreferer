@@ -42,6 +42,13 @@ print "reading db"
 #graph.parse("data.rdf", format="nt")
 #print "done", len(graph)
 
+# see also
+# http://www.cs.umd.edu/Library/TRs/CS-TR-4611/CS-TR-4611.ps
+# "In this paper, we propose the CAA (Compute Aggregates Algorithm)
+# algorithm to efficiently compute aggregate operations such as
+# COUNT,SUM,AVG,MIN,MAX and so on. CAA can also handle GROUPBY
+# queries. We subsequently define algorithms to maintain aggregate
+# views. These are views involving aggregate queries."
 
 class SummaryField(object):
     def __init__(self, var="?bytes"):
@@ -60,14 +67,17 @@ class Total(SummaryField):
 
 class Range(SummaryField):
     def setup(self):
-        self.all = []
+        self.lo = None
+        self.hi = None
     def accum(self, value):
-        self.all.append(value)
+        if self.lo is None or value < self.lo:
+            self.lo = value
+        if self.hi is None or value > self.hi:
+            self.hi = value
     def get(self):
-        self.all.sort()
         class _:
-            start = self.all[0]
-            end = self.all[1]
+            start = self.lo
+            end = self.hi
         return _()
     
 class Count(SummaryField):
@@ -121,41 +131,22 @@ def _localHits(localFile):
 @MWT(timeout=TIMEOUT)
 def hitSummary(remotePage, localFile):
     """totalBytes, hitCount, earliestDate, latestDate"""
-    bytes = 0
-    hitCount = 0
-    dates = []
     print "query", remotePage, localFile
-#    for hit in _localHits(localFile):
-#        if graph.value(hit, PR['remotePage']) != remotePage:
-#            continue
-#        by = graph.value(hit, PR['bytes'])
-#        date = graph.value(hit, DC['date'])
-    t1 = time.time()
-    
-    if 0:
-        for by,date in graph.query(("?bytes", "?date"),
-                GraphPattern([("?hit", PR['remotePage'], remotePage),
-                              ("?hit", PR['localFile'], localFile),
-                              ("?hit", DC['date'], "?date"),
-                              ("?hit", PR['bytes'], "?bytes")])):
 
-            dates.append(date)
-            bytes += getLiteralValue(by)
-            hitCount += 1
-    else:
-        ts = TripleSummary(graph,
-                           GraphPattern([
-            ("?hit", PR['remotePage'], remotePage),
-            ("?hit", PR['localFile'], localFile),
-            ("?hit", DC['date'], "?date"),
-            ("?hit", PR['bytes'], "?bytes")]),
-                           bytes=Total("?bytes"),
-                           date=Range("?date"),
-                           hitCount=Count("?hit"),
-                           )
-        hitCount = ts['hitCount']
-        dates = [ts['date'].start, ts['date'].end]
-        bytes = ts['bytes']
+    t1 = time.time()
+    ts = TripleSummary(graph,
+                       GraphPattern([
+        ("?hit", PR['remotePage'], remotePage),
+        ("?hit", PR['localFile'], localFile),
+        ("?hit", DC['date'], "?date"),
+        ("?hit", PR['bytes'], "?bytes")]),
+                       bytes=Total("?bytes"),
+                       date=Range("?date"),
+                       hitCount=Count("?hit"),
+                       )
+    hitCount = ts['hitCount']
+    dates = [ts['date'].start, ts['date'].end]
+    bytes = ts['bytes']
     print "%.2f sec for %s hits" % (time.time() - t1, hitCount)
     dates.sort()
 
